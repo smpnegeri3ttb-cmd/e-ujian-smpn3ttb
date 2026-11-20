@@ -113,9 +113,9 @@
         <div class="text-xs font-extrabold uppercase tracking-wide">SIAP MEMULAI UJIAN</div>
         <div class="marquee-wrapper">
           <div class="marquee-content text-[11px] font-semibold text-blue-50 uppercase">
-            <span class="mx-4">JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMAL</span>
+            <span class="mx-4">ദ്ദി◝ ⩊ ◜.ᐟJANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMALദ്ദി◝ ⩊ ◜.ᐟ</span>
             <span class="mx-4">&bull;</span>
-            <span class="mx-4">JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMAL</span>
+            <span class="mx-4">ദ്ദി(˵ •̀ ᴗ - ˵ ) ✧JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMALദ്ദി(˵ •̀ ᴗ - ˵ ) ✧</span>
           </div>
         </div>
       </div>
@@ -266,7 +266,6 @@
     let splitLocked = false;
     let resizeTimeout = null;
     let initW = 0;
-    let initH = 0;
 
     function getDeviceId() {
       let devId = localStorage.getItem("cbt_device_uid");
@@ -341,7 +340,6 @@
       setTimeout(() => {
         examActive = true;
         initW = window.innerWidth;
-        initH = window.innerHeight;
         aktifkanSensor();
         mulaiTimer();
       }, 1500);
@@ -366,14 +364,6 @@
       }, 1000);
     }
 
-    function isKeyboardOrFormActive() {
-      const activeTag = document.activeElement ? document.activeElement.tagName : "";
-      const isInput = activeTag === "INPUT" || activeTag === "TEXTAREA" || (document.activeElement && document.activeElement.isContentEditable);
-      const isInForm = document.activeElement === document.getElementById("gform-frame");
-      const visualViewportShrink = window.visualViewport && window.innerHeight < window.visualViewport.height - 80;
-      return Boolean(isInput || isInForm || visualViewportShrink);
-    }
-
     function cekSplitScreen() {
       if (!examActive) return;
 
@@ -381,25 +371,15 @@
       resizeTimeout = setTimeout(() => {
         if (!examActive) return;
 
-        // Jika keyboard HP aktif atau sedang fokus ke form/input, abaikan penyusutan akibat keyboard
-        if (isKeyboardOrFormActive()) {
-          splitLocked = false;
-          document.getElementById("exam-screen").classList.remove("blurred");
-          return;
-        }
-
+        // Tinggi layar diabaikan agar kemunculan keyboard HP maupun pengisian nama/form tidak memicu pelanggaran
         const w = window.innerWidth;
-        const h = window.innerHeight;
-
         const lebarMenyempit = initW > 0 && w < initW * 0.72;
-        const tinggiMenyempitTanpaKeyboard = initH > 0 && h < initH * 0.48;
-        const menyempit = lebarMenyempit || tinggiMenyempitTanpaKeyboard;
 
-        if (menyempit && !splitLocked) {
+        if (lebarMenyempit && !splitLocked) {
           splitLocked = true;
           document.getElementById("exam-screen").classList.add("blurred");
           eksekusiPelanggaran("Terdeteksi Split Screen / Layar Menyempit");
-        } else if (!menyempit && splitLocked) {
+        } else if (!lebarMenyempit && splitLocked) {
           splitLocked = false;
           document.getElementById("exam-screen").classList.remove("blurred");
         }
@@ -418,18 +398,7 @@
         }
       });
 
-      window.addEventListener("blur", () => {
-        setTimeout(() => {
-          if (document.hidden && examActive) {
-            eksekusiPelanggaran("Kehilangan Fokus Layar");
-          }
-        }, 300);
-      });
-
       window.addEventListener("resize", cekSplitScreen);
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", cekSplitScreen);
-      }
     }
 
     function eksekusiPelanggaran(alasan) {
