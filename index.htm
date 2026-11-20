@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>E-UJIAN ONLINE - SMP NEGERI 3 TEBING TINGGI BARAT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    input {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: linear-gradient(180deg, #e7f0fc 0%, #f4f8fe 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .card-clean {
+      background: #ffffff;
+      border: 1px solid rgba(59, 130, 246, 0.16);
+      box-shadow: 0 12px 30px -8px rgba(37, 99, 235, 0.14);
+    }
+
+    /* RUNNING TEXT */
+    .marquee-wrapper {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 9999px;
+      padding: 4px 0;
+      margin-top: 6px;
+    }
+    @keyframes marqueeAnim {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-content {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: marqueeAnim 12s linear infinite;
+    }
+    .marquee-content:hover {
+      animation-play-state: paused;
+    }
+
+    #exam-screen.blurred {
+      filter: blur(18px);
+    }
+    #watermark-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      align-items: center;
+      opacity: 0.12;
+      overflow: hidden;
+    }
+    .wm-text {
+      transform: rotate(-30deg);
+      font-size: 13px;
+      font-weight: 700;
+      color: #dc2626;
+      padding: 32px;
+      white-space: nowrap;
+    }
+    #camera-box {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      width: 110px;
+      height: 145px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2.5px solid #2563eb;
+      z-index: 50;
+      background: #0f172a;
+    }
+    #video-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+  </style>
+</head>
+<body oncontextmenu="return false;" oncopy="return false;" onpaste="return false;">
+
+  <!-- HALAMAN LOGIN -->
+  <div id="login-screen" class="flex items-center justify-center min-h-screen p-4 overflow-y-auto">
+    <div class="w-full max-w-md card-clean rounded-3xl p-6 text-slate-800">
+
+      <!-- LOGO SEKOLAH VIA GOOGLE DRIVE ID -->
+      <div class="text-center mb-4">
+        <div class="flex justify-center mb-2.5">
+          <div class="w-20 h-20 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1.5 shadow-sm overflow-hidden">
+            <img id="login-logo-img" src="" alt="Logo SMP Negeri 3 Tebing Tinggi Barat" class="w-full h-full object-contain hidden">
+            <!-- Cadangan jika ID Drive belum diisi atau gagal dimuat -->
+            <svg id="login-logo-fallback" viewBox="0 0 120 120" class="w-full h-full">
+              <circle cx="60" cy="60" r="54" fill="#2563eb"/>
+              <circle cx="60" cy="60" r="47" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.8"/>
+              <polygon points="60,27 95,45 60,63 25,45" fill="#ffffff"/>
+              <path d="M36,53 V71 C36,79 84,79 84,71 V53 L60,65 Z" fill="#dbeafe"/>
+              <text x="60" y="96" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">SMPN 3 TTB</text>
+            </svg>
+          </div>
+        </div>
+        <span class="inline-block px-3 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-extrabold tracking-wider uppercase border border-blue-100">
+          PORTAL E-UJIAN ONLINE
+        </span>
+        <h1 class="text-base font-black text-slate-900 uppercase mt-1">
+          SMP NEGERI 3 TEBING TINGGI BARAT
+        </h1>
+        <p class="text-[11px] text-slate-500">Kabupaten Kepulauan Meranti</p>
+      </div>
+
+      <!-- BANNER DENGAN RUNNING TEXT -->
+      <div class="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700 text-white text-center shadow-md overflow-hidden">
+        <div class="text-xs font-extrabold uppercase tracking-wide">SIAP MEMULAI UJIAN</div>
+        <div class="marquee-wrapper">
+          <div class="marquee-content text-[11px] font-semibold text-blue-50 uppercase">
+            <span class="mx-4">JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMAL</span>
+            <span class="mx-4">&bull;</span>
+            <span class="mx-4">JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMAL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORM LOGIN -->
+      <form id="form-login" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-slate-600 mb-1">Nama Lengkap Murid</label>
+          <input type="text" id="input-nama" required placeholder="CONTOH: M. AGUS SUWANDI" class="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white outline-none uppercase text-xs font-semibold">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-slate-600 mb-1">Kelas</label>
+          <input type="text" id="input-kelas" required placeholder="CONTOH: KELAS 7.1" class="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white outline-none uppercase text-xs font-semibold">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase text-slate-600 mb-1">Token / Kode Akses Soal</label>
+          <input type="text" id="input-token" required placeholder="MASUKKAN TOKEN" class="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white outline-none uppercase font-mono tracking-widest text-xs font-bold">
+        </div>
+
+        <div id="alert-box" class="hidden p-3 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs text-center font-semibold"></div>
+
+        <button type="submit" id="btn-mulai" class="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 font-extrabold text-xs tracking-wider uppercase text-white shadow-lg transition">
+          MULAI UJIAN
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- HALAMAN UJIAN -->
+  <div id="exam-screen" class="hidden flex flex-col h-screen w-screen bg-white overflow-hidden">
+    <div class="bg-white text-slate-800 px-3 py-2 flex justify-between items-center border-b border-blue-100 z-50 flex-shrink-0">
+      <div class="flex items-center space-x-2 truncate max-w-[48%]">
+        <img id="header-logo-img" src="" alt="Logo" class="w-6 h-6 object-contain flex-shrink-0 hidden">
+        <svg id="header-logo-fallback" viewBox="0 0 120 120" class="w-6 h-6 flex-shrink-0">
+          <circle cx="60" cy="60" r="54" fill="#2563eb"/>
+          <polygon points="60,27 95,45 60,63 25,45" fill="#ffffff"/>
+          <path d="M36,53 V71 C36,79 84,79 84,71 V53 L60,65 Z" fill="#dbeafe"/>
+        </svg>
+        <div class="text-xs truncate">
+          <span class="font-extrabold text-blue-600" id="disp-nama">-</span>
+          <span class="text-slate-400 mx-1">&bull;</span>
+          <span class="font-semibold" id="disp-kelas">-</span>
+          <span class="text-slate-400 mx-1">&bull;</span>
+          <span class="font-bold" id="disp-mapel">-</span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <div class="bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-100">
+          <span id="timer-countdown" class="font-mono text-blue-700 font-extrabold text-xs">--:--:--</span>
+        </div>
+        <span id="badge-curang" class="px-2 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold">AMAN</span>
+        <button onclick="selesaiUjianManual()" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white text-[11px] font-bold">Submit</button>
+      </div>
+    </div>
+
+    <div id="watermark-overlay"></div>
+
+    <div class="flex-1 w-full h-full relative bg-white">
+      <iframe id="gform-frame" src="" class="w-full h-full border-0 absolute inset-0"></iframe>
+    </div>
+
+    <div id="camera-box" class="hidden">
+      <video id="video-preview" autoplay playsinline muted></video>
+      <div class="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">&#9679; LIVE</div>
+    </div>
+  </div>
+
+  <!-- MODAL PERINGATAN -->
+  <div id="floating-warning-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4">
+    <div class="bg-white border border-red-200 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+      <h3 class="text-base font-black text-slate-900 mb-1">PERINGATAN PELANGGARAN</h3>
+      <div id="warning-counter-badge" class="inline-block px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-extrabold border border-red-200 mb-3">
+        PELANGGARAN (1/2)
+      </div>
+      <p id="warning-reason-text" class="text-xs text-slate-600 mb-4 bg-slate-50 p-3 rounded-2xl"></p>
+      <button onclick="document.getElementById('floating-warning-modal').classList.add('hidden')" class="w-full py-3 rounded-2xl bg-blue-600 text-white font-bold text-xs uppercase">
+        Kembali Ujian
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL KONFIRMASI SUBMIT -->
+  <div id="custom-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4">
+    <div class="bg-white border border-blue-100 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+      <h2 class="text-base font-black text-slate-900 mb-2">YAKIN INGIN MENYELESAIKAN UJIAN?</h2>
+      <p class="text-xs text-slate-600 mb-4">Pastikan jawaban di form sudah dikirim.</p>
+      <div class="flex space-x-2">
+        <button onclick="document.getElementById('custom-modal').classList.add('hidden')" class="flex-1 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs">BATAL</button>
+        <button onclick="konfirmasiSubmitUjian()" class="flex-1 py-2.5 rounded-2xl bg-blue-600 text-white font-bold text-xs">YA, SELESAIKAN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HALAMAN TERKUNCI -->
+  <div id="locked-screen" class="hidden flex items-center justify-center min-h-screen p-6 text-center z-50">
+    <div class="max-w-md w-full card-clean rounded-3xl p-7">
+      <div class="text-3xl mb-3" id="locked-icon">&#128274;</div>
+      <h1 class="text-lg font-black text-slate-900 mb-2" id="locked-title">SESI UJIAN BERAKHIR</h1>
+      <p id="locked-reason" class="text-xs text-slate-600 mb-4 bg-slate-50 p-4 rounded-2xl"></p>
+      <div class="p-3 bg-blue-50 rounded-2xl text-xs text-blue-700 font-semibold">Hubungi Pengawas / Admin.</div>
+    </div>
+  </div>
+
+  <script>
+    // 1. MASUKKAN ID GOOGLE DRIVE LOGO SEKOLAH ANDA DI SINI
+    const LOGO_DRIVE_ID = "1d0refCfkU4lSYV6HDC3f0MboKyzAZHoX";
+
+    // 2. MASUKKAN URL WEB APP GOOGLE APPS SCRIPT (/exec)
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyYmqPrxCXnOeHvsbrMIQdqm6nhjgjCq2nix7nPaz71TR0Aw-WGT9cfoPAOj69nuVsT/exec";
+
+    // Muat Logo dari Google Drive ID dengan fallback otomatis
+    (function loadDriveLogo() {
+      if (!LOGO_DRIVE_ID || LOGO_DRIVE_ID === "ISI_ID_GOOGLE_DRIVE_LOGO_ANDA_DI_SINI") return;
+      const cleanId = String(LOGO_DRIVE_ID).trim();
+      const loginImg = document.getElementById("login-logo-img");
+      const loginFb = document.getElementById("login-logo-fallback");
+      const headerImg = document.getElementById("header-logo-img");
+      const headerFb = document.getElementById("header-logo-fallback");
+
+      const primaryUrl = `https://lh3.googleusercontent.com/d/${cleanId}`;
+      const fallbackUrl = `https://drive.google.com/thumbnail?id=${cleanId}&sz=w1000`;
+
+      loginImg.onload = () => {
+        loginImg.classList.remove("hidden");
+        loginFb.classList.add("hidden");
+      };
+      loginImg.onerror = () => {
+        if (loginImg.src !== fallbackUrl) {
+          loginImg.src = fallbackUrl;
+        }
+      };
+
+      headerImg.onload = () => {
+        headerImg.classList.remove("hidden");
+        headerFb.classList.add("hidden");
+      };
+      headerImg.onerror = () => {
+        if (headerImg.src !== fallbackUrl) {
+          headerImg.src = fallbackUrl;
+        }
+      };
+
+      loginImg.src = primaryUrl;
+      headerImg.src = primaryUrl;
+    })();
+
+    let examActive = false;
+    let userData = {};
+    let curangCount = 0;
+    let maxCurangAllowed = 1;
+    let mediaStream = null;
+    let cameraReady = false;
+    let timerInterval = null;
+    let splitLocked = false;
+    let initW = 0;
+    let initH = 0;
+
+    function getDeviceId() {
+      let devId = localStorage.getItem("cbt_device_uid");
+      if (!devId) {
+        devId = "DEV-" + Date.now().toString(36).toUpperCase();
+        localStorage.setItem("cbt_device_uid", devId);
+      }
+      return devId;
+    }
+
+    document.getElementById("form-login").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-mulai");
+      const alertBox = document.getElementById("alert-box");
+      alertBox.classList.add("hidden");
+
+      const nama = document.getElementById("input-nama").value.trim();
+      const kelas = document.getElementById("input-kelas").value.trim();
+      const token = document.getElementById("input-token").value.trim().toUpperCase();
+
+      btn.disabled = true;
+      btn.innerText = "MEMPROSES LOGIN...";
+
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+          document.getElementById("video-preview").srcObject = mediaStream;
+          document.getElementById("camera-box").classList.remove("hidden");
+          cameraReady = true;
+        }
+      } catch (err) {
+        cameraReady = false;
+      }
+
+      try {
+        const response = await fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `action=login&token=${encodeURIComponent(token)}`
+        });
+        const res = await response.json();
+
+        if (res.status === "success") {
+          userData = { nama, kelas, token, mapel: res.mapel, linkForm: res.linkForm };
+          maxCurangAllowed = parseInt(res.maxCurang) || 1;
+          const durasiMs = (parseInt(res.durasiMenit) || 90) * 60 * 1000;
+          localStorage.setItem("exam_end_time", Date.now() + durasiMs);
+          mulaiSesiUjian(userData);
+        } else {
+          if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+          alertBox.innerText = res.message || "Token Salah atau Belum Aktif!";
+          alertBox.classList.remove("hidden");
+          btn.disabled = false;
+          btn.innerText = "MASUK & MULAI UJIAN";
+        }
+      } catch (err) {
+        if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+        alertBox.innerText = "Gagal terhubung ke server: " + err.message;
+        alertBox.classList.remove("hidden");
+        btn.disabled = false;
+        btn.innerText = "MASUK & MULAI UJIAN";
+      }
+    });
+
+    function mulaiSesiUjian(res) {
+      document.getElementById("login-screen").classList.add("hidden");
+      document.getElementById("exam-screen").classList.remove("hidden");
+      document.getElementById("disp-nama").innerText = res.nama;
+      document.getElementById("disp-kelas").innerText = res.kelas;
+      document.getElementById("disp-mapel").innerText = res.mapel;
+
+      let formUrl = res.linkForm;
+      if (formUrl.includes("viewform") && !formUrl.includes("embedded=true")) {
+        formUrl += (formUrl.includes("?") ? "&" : "?") + "embedded=true";
+      }
+      document.getElementById("gform-frame").src = formUrl;
+
+      const tgl = new Date().toLocaleDateString("id-ID");
+      let wm = "";
+      for (let i = 0; i < 20; i++) {
+        wm += `<div class="wm-text">${res.nama} - ${res.kelas} - ${tgl}</div>`;
+      }
+      document.getElementById("watermark-overlay").innerHTML = wm;
+
+      setTimeout(() => {
+        examActive = true;
+        initW = window.innerWidth;
+        initH = window.innerHeight;
+        aktifkanSensor();
+        mulaiTimer();
+      }, 1500);
+    }
+
+    function mulaiTimer() {
+      const endTime = parseInt(localStorage.getItem("exam_end_time")) || (Date.now() + 90 * 60 * 1000);
+      const timerEl = document.getElementById("timer-countdown");
+
+      timerInterval = setInterval(() => {
+        if (!examActive) return;
+        const sisa = endTime - Date.now();
+        if (sisa <= 0) {
+          clearInterval(timerInterval);
+          kunciAplikasi("Waktu Ujian Telah Habis!", "&#9200;", "WAKTU UJIAN BERAKHIR");
+          return;
+        }
+        const j = Math.floor(sisa / 3600000);
+        const m = Math.floor((sisa % 3600000) / 60000);
+        const d = Math.floor((sisa % 60000) / 1000);
+        timerEl.innerText = `${String(j).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(d).padStart(2,"0")}`;
+      }, 1000);
+    }
+
+    function cekSplitScreen() {
+      if (!examActive) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const menyempit = (initW > 0 && w < initW * 0.72) || (initH > 0 && h < initH * 0.65);
+
+      if (menyempit && !splitLocked) {
+        splitLocked = true;
+        document.getElementById("exam-screen").classList.add("blurred");
+        eksekusiPelanggaran("Terdeteksi Split Screen / Layar Menyempit");
+      } else if (!menyempit && splitLocked) {
+        splitLocked = false;
+        document.getElementById("exam-screen").classList.remove("blurred");
+      }
+    }
+
+    function aktifkanSensor() {
+      window.open = () => {
+        eksekusiPelanggaran("Mencoba Membuka Jendela Baru");
+        return null;
+      };
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && examActive) {
+          eksekusiPelanggaran("Keluar Tab / Pindah Aplikasi");
+        }
+      });
+
+      window.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (document.activeElement !== document.getElementById("gform-frame") && examActive) {
+            eksekusiPelanggaran("Kehilangan Fokus Layar");
+          }
+        }, 200);
+      });
+
+      window.addEventListener("resize", cekSplitScreen);
+
+      if (cameraReady) {
+        setInterval(() => {
+          if (!examActive) return;
+          if (!mediaStream || !mediaStream.active || mediaStream.getVideoTracks()[0].readyState === "ended") {
+            eksekusiPelanggaran("Kamera Dimatikan Paksa");
+          }
+        }, 3000);
+      }
+    }
+
+    function eksekusiPelanggaran(alasan) {
+      if (!examActive) return;
+      curangCount++;
+
+      const badge = document.getElementById("badge-curang");
+      badge.className = "px-2 py-1 rounded-xl bg-red-600 text-white text-[10px] font-extrabold";
+      badge.innerText = `CURANG : ${curangCount}`;
+
+      if (curangCount >= maxCurangAllowed) {
+        kunciAplikasi(`Terdeteksi: ${alasan}. Laporan tercatat di server.`);
+      } else {
+        document.getElementById("warning-counter-badge").innerText = `PELANGGARAN (${curangCount}/${maxCurangAllowed})`;
+        document.getElementById("warning-reason-text").innerHTML = `Aktivitas terdeteksi:<br><b class="text-red-600">${alasan}</b>`;
+        document.getElementById("floating-warning-modal").classList.remove("hidden");
+      }
+
+      try {
+        fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `action=laporCurang&nama=${encodeURIComponent(userData.nama)}&token=${encodeURIComponent(userData.token)}&kelas=${encodeURIComponent(userData.kelas)}&keterangan=${encodeURIComponent(alasan)}&deviceId=${encodeURIComponent(getDeviceId())}`
+        });
+      } catch (e) {}
+    }
+
+    function selesaiUjianManual() {
+      document.getElementById("custom-modal").classList.remove("hidden");
+    }
+
+    function konfirmasiSubmitUjian() {
+      document.getElementById("custom-modal").classList.add("hidden");
+      localStorage.removeItem("exam_end_time");
+      kunciAplikasi("Ujian telah selesai dan disubmit. Terima kasih.", "&#9989;", "UJIAN SELESAI");
+    }
+
+    function kunciAplikasi(pesan, icon = "&#128274;", judul = "SESI UJIAN BERAKHIR") {
+      examActive = false;
+      clearInterval(timerInterval);
+      document.getElementById("gform-frame").src = "about:blank";
+      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+      document.getElementById("exam-screen").classList.add("hidden");
+      document.getElementById("locked-icon").innerHTML = icon;
+      document.getElementById("locked-title").innerText = judul;
+      document.getElementById("locked-reason").innerText = pesan;
+      document.getElementById("locked-screen").classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>
