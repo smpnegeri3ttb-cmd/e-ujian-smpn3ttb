@@ -11,7 +11,7 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    input {
+    input, textarea {
       -webkit-user-select: text;
       user-select: text;
     }
@@ -77,24 +77,6 @@
       padding: 32px;
       white-space: nowrap;
     }
-    #camera-box {
-      position: fixed;
-      bottom: 14px;
-      right: 14px;
-      width: 110px;
-      height: 145px;
-      border-radius: 14px;
-      overflow: hidden;
-      border: 2.5px solid #2563eb;
-      z-index: 50;
-      background: #0f172a;
-    }
-    #video-preview {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1);
-    }
   </style>
 </head>
 <body oncontextmenu="return false;" oncopy="return false;" onpaste="return false;">
@@ -108,7 +90,6 @@
         <div class="flex justify-center mb-2.5">
           <div class="w-20 h-20 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1.5 shadow-sm overflow-hidden">
             <img id="login-logo-img" src="" alt="Logo SMP Negeri 3 Tebing Tinggi Barat" class="w-full h-full object-contain hidden">
-            <!-- Cadangan jika ID Drive belum diisi atau gagal dimuat -->
             <svg id="login-logo-fallback" viewBox="0 0 120 120" class="w-full h-full">
               <circle cx="60" cy="60" r="54" fill="#2563eb"/>
               <circle cx="60" cy="60" r="47" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.8"/>
@@ -157,7 +138,7 @@
         <div id="alert-box" class="hidden p-3 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-xs text-center font-semibold"></div>
 
         <button type="submit" id="btn-mulai" class="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 font-extrabold text-xs tracking-wider uppercase text-white shadow-lg transition">
-          MULAI UJIAN
+          MASUK & MULAI UJIAN
         </button>
       </form>
     </div>
@@ -195,11 +176,6 @@
 
     <div class="flex-1 w-full h-full relative bg-white">
       <iframe id="gform-frame" src="" class="w-full h-full border-0 absolute inset-0"></iframe>
-    </div>
-
-    <div id="camera-box" class="hidden">
-      <video id="video-preview" autoplay playsinline muted></video>
-      <div class="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">&#9679; LIVE</div>
     </div>
   </div>
 
@@ -286,10 +262,9 @@
     let userData = {};
     let curangCount = 0;
     let maxCurangAllowed = 1;
-    let mediaStream = null;
-    let cameraReady = false;
     let timerInterval = null;
     let splitLocked = false;
+    let resizeTimeout = null;
     let initW = 0;
     let initH = 0;
 
@@ -316,17 +291,6 @@
       btn.innerText = "MEMPROSES LOGIN...";
 
       try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-          document.getElementById("video-preview").srcObject = mediaStream;
-          document.getElementById("camera-box").classList.remove("hidden");
-          cameraReady = true;
-        }
-      } catch (err) {
-        cameraReady = false;
-      }
-
-      try {
         const response = await fetch(WEB_APP_URL, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -341,14 +305,12 @@
           localStorage.setItem("exam_end_time", Date.now() + durasiMs);
           mulaiSesiUjian(userData);
         } else {
-          if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
           alertBox.innerText = res.message || "Token Salah atau Belum Aktif!";
           alertBox.classList.remove("hidden");
           btn.disabled = false;
           btn.innerText = "MASUK & MULAI UJIAN";
         }
       } catch (err) {
-        if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
         alertBox.innerText = "Gagal terhubung ke server: " + err.message;
         alertBox.classList.remove("hidden");
         btn.disabled = false;
@@ -404,20 +366,44 @@
       }, 1000);
     }
 
+    function isKeyboardOrFormActive() {
+      const activeTag = document.activeElement ? document.activeElement.tagName : "";
+      const isInput = activeTag === "INPUT" || activeTag === "TEXTAREA" || (document.activeElement && document.activeElement.isContentEditable);
+      const isInForm = document.activeElement === document.getElementById("gform-frame");
+      const visualViewportShrink = window.visualViewport && window.innerHeight < window.visualViewport.height - 80;
+      return Boolean(isInput || isInForm || visualViewportShrink);
+    }
+
     function cekSplitScreen() {
       if (!examActive) return;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const menyempit = (initW > 0 && w < initW * 0.72) || (initH > 0 && h < initH * 0.65);
 
-      if (menyempit && !splitLocked) {
-        splitLocked = true;
-        document.getElementById("exam-screen").classList.add("blurred");
-        eksekusiPelanggaran("Terdeteksi Split Screen / Layar Menyempit");
-      } else if (!menyempit && splitLocked) {
-        splitLocked = false;
-        document.getElementById("exam-screen").classList.remove("blurred");
-      }
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (!examActive) return;
+
+        // Jika keyboard HP aktif atau sedang fokus ke form/input, abaikan penyusutan akibat keyboard
+        if (isKeyboardOrFormActive()) {
+          splitLocked = false;
+          document.getElementById("exam-screen").classList.remove("blurred");
+          return;
+        }
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        const lebarMenyempit = initW > 0 && w < initW * 0.72;
+        const tinggiMenyempitTanpaKeyboard = initH > 0 && h < initH * 0.48;
+        const menyempit = lebarMenyempit || tinggiMenyempitTanpaKeyboard;
+
+        if (menyempit && !splitLocked) {
+          splitLocked = true;
+          document.getElementById("exam-screen").classList.add("blurred");
+          eksekusiPelanggaran("Terdeteksi Split Screen / Layar Menyempit");
+        } else if (!menyempit && splitLocked) {
+          splitLocked = false;
+          document.getElementById("exam-screen").classList.remove("blurred");
+        }
+      }, 350);
     }
 
     function aktifkanSensor() {
@@ -434,21 +420,15 @@
 
       window.addEventListener("blur", () => {
         setTimeout(() => {
-          if (document.activeElement !== document.getElementById("gform-frame") && examActive) {
+          if (document.hidden && examActive) {
             eksekusiPelanggaran("Kehilangan Fokus Layar");
           }
-        }, 200);
+        }, 300);
       });
 
       window.addEventListener("resize", cekSplitScreen);
-
-      if (cameraReady) {
-        setInterval(() => {
-          if (!examActive) return;
-          if (!mediaStream || !mediaStream.active || mediaStream.getVideoTracks()[0].readyState === "ended") {
-            eksekusiPelanggaran("Kamera Dimatikan Paksa");
-          }
-        }, 3000);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", cekSplitScreen);
       }
     }
 
@@ -490,8 +470,8 @@
     function kunciAplikasi(pesan, icon = "&#128274;", judul = "SESI UJIAN BERAKHIR") {
       examActive = false;
       clearInterval(timerInterval);
+      clearTimeout(resizeTimeout);
       document.getElementById("gform-frame").src = "about:blank";
-      if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
       document.getElementById("exam-screen").classList.add("hidden");
       document.getElementById("locked-icon").innerHTML = icon;
       document.getElementById("locked-title").innerText = judul;
