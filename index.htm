@@ -110,12 +110,12 @@
 
       <!-- BANNER DENGAN RUNNING TEXT -->
       <div class="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-700 text-white text-center shadow-md overflow-hidden">
-        <div class="text-xs font-extrabold uppercase tracking-wide">SIAP MEMULAI UJIAN</div>
+        <div class="text-xs font-extrabold uppercase tracking-wide">ＳＩＡＰ　ＭＥＭＵＬＡＩ　ＵＪＩＡＮ　ギぜぞ</div>
         <div class="marquee-wrapper">
           <div class="marquee-content text-[11px] font-semibold text-blue-50 uppercase">
-            <span class="mx-4">ദ്ദി◝ ⩊ ◜.ᐟJANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMALദ്ദി◝ ⩊ ◜.ᐟ</span>
+            <span class="mx-4">JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMAL</span>
             <span class="mx-4">&bull;</span>
-            <span class="mx-4">ദ്ദി(˵ •̀ ᴗ - ˵ ) ✧JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMALദ്ദി(˵ •̀ ᴗ - ˵ ) ✧</span>
+            <span class="mx-4">JANGAN LUPA BERDO'A SUPAYA MENDAPATKAN HASIL MAKSIMAL</span>
           </div>
         </div>
       </div>
@@ -265,6 +265,7 @@
     let timerInterval = null;
     let splitLocked = false;
     let resizeTimeout = null;
+    let violationCooldown = false;
     let initW = 0;
 
     function getDeviceId() {
@@ -364,6 +365,15 @@
       }, 1000);
     }
 
+    function triggerViolationOnce(alasan) {
+      if (!examActive || violationCooldown) return;
+      violationCooldown = true;
+      eksekusiPelanggaran(alasan);
+      setTimeout(() => {
+        violationCooldown = false;
+      }, 1500);
+    }
+
     function cekSplitScreen() {
       if (!examActive) return;
 
@@ -371,14 +381,14 @@
       resizeTimeout = setTimeout(() => {
         if (!examActive) return;
 
-        // Tinggi layar diabaikan agar kemunculan keyboard HP maupun pengisian nama/form tidak memicu pelanggaran
+        // Tinggi layar diabaikan agar keyboard HP dan pengisian nama/jawaban tidak dianggap split screen
         const w = window.innerWidth;
         const lebarMenyempit = initW > 0 && w < initW * 0.72;
 
         if (lebarMenyempit && !splitLocked) {
           splitLocked = true;
           document.getElementById("exam-screen").classList.add("blurred");
-          eksekusiPelanggaran("Terdeteksi Split Screen / Layar Menyempit");
+          triggerViolationOnce("Terdeteksi Split Screen / Layar Menyempit");
         } else if (!lebarMenyempit && splitLocked) {
           splitLocked = false;
           document.getElementById("exam-screen").classList.remove("blurred");
@@ -388,13 +398,20 @@
 
     function aktifkanSensor() {
       window.open = () => {
-        eksekusiPelanggaran("Mencoba Membuka Jendela Baru");
+        triggerViolationOnce("Mencoba Membuka Jendela Baru");
         return null;
       };
 
+      // Saat keluar tab / pindah ke aplikasi AI / minimize
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden && examActive) {
-          eksekusiPelanggaran("Keluar Tab / Pindah Aplikasi");
+        if (!examActive) return;
+        if (document.hidden) {
+          document.getElementById("exam-screen").classList.add("blurred");
+          triggerViolationOnce("Keluar Tab / Pindah Aplikasi");
+        } else {
+          if (!splitLocked) {
+            document.getElementById("exam-screen").classList.remove("blurred");
+          }
         }
       });
 
